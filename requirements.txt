@@ -41,3 +41,4 @@ uvicorn
 gunicorn
 google-generativeai
 python-dotenv
+Pillow
