@@ -31,11 +31,12 @@ import ast
 import json
 from PIL import Image
 from constants import GEMINI_API_KEY
+import re
 
 genai.configure(api_key=GEMINI_API_KEY)
 
 def analyze_image(img: Image, dict_of_vars: dict):
-    model = genai.GenerativeModel(model_name="gemini-1.5-flash")
+    model = genai.GenerativeModel(model_name="gemini-2.0-flash")
     dict_of_vars_str = json.dumps(dict_of_vars, ensure_ascii=False)
     prompt = (
         f"You have been given an image with some mathematical expressions, equations, or graphical problems, and you need to solve them. "
@@ -58,14 +59,23 @@ def analyze_image(img: Image, dict_of_vars: dict):
         f"DO NOT USE BACKTICKS OR MARKDOWN FORMATTING. "
         f"PROPERLY QUOTE THE KEYS AND VALUES IN THE DICTIONARY FOR EASIER PARSING WITH Python's ast.literal_eval."
     )
+    print("Sending prompt to Gemini...")  # ADD THIS
     response = model.generate_content([prompt, img])
+    print("Raw Gemini response:\n", response.text) 
     print(response.text)
+    # response_text = response.text.strip().strip("`")
+    match = re.search(r"\[\s*{.*?}\s*]", response.text, re.DOTALL)
     answers = []
-    try:
-        answers = ast.literal_eval(response.text)
-    except Exception as e:
-        print(f"Error in parsing response from Gemini API: {e}")
+    if match:
+        try:
+            answers = ast.literal_eval(match.group(0))
+        except Exception as e:
+            print(f"Error in parsing response from Gemini API: {e}")
+    else:
+        print("No valid JSON block found in reponse")
+
     print('returned answer ', answers)
+    
     for answer in answers:
         if 'assign' in answer:
             answer['assign'] = True
